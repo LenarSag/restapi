@@ -26,9 +26,7 @@ class UserCommonTestFunctionality(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.user = User.objects.create_user(
-            username=VALID_REG_DATA["username"],
-            email=VALID_REG_DATA["email"],
-            password=VALID_REG_DATA["password"],
+            **VALID_REG_DATA,
         )
 
 
