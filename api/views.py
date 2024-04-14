@@ -14,6 +14,23 @@ from .utils import generate_access_token, generate_refresh_token
 User = get_user_model()
 
 
+def get_user_from_refresh_token(request):
+    refresh_token = request.data.get("refresh_token")
+    if refresh_token is None:
+        raise exceptions.PermissionDenied(
+            "Credentials for refresh token were not provided."
+        )
+    try:
+        uuid.UUID(refresh_token)
+    except ValueError:
+        raise exceptions.ValidationError("Invalid refresh token format")
+
+    user = User.objects.filter(refresh_token=refresh_token).first()
+    if user is None:
+        raise exceptions.NotFound("Please provide the correct refresh token")
+    return user
+
+
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def register_view(request):
@@ -62,10 +79,10 @@ def login_view(request):
 
 
 @api_view(["POST"])
+@permission_classes([AllowAny])
 def logout_view(request):
-    user = request.user
     response = Response()
-
+    user = get_user_from_refresh_token(request)
     user.refresh_token_created_at = None
     user.refresh_token_expires_at = None
     user.save()
@@ -78,21 +95,7 @@ def logout_view(request):
 @permission_classes([AllowAny])
 def refresh_token(request):
     response = Response()
-    refresh_token = request.data.get("refresh_token")
-    if refresh_token is None:
-        raise exceptions.PermissionDenied(
-            "Credentials for refresh token were not provided."
-        )
-
-    try:
-        uuid.UUID(refresh_token)
-    except ValueError:
-        raise exceptions.ValidationError("Invalid refresh token format")
-
-    user = User.objects.filter(refresh_token=refresh_token).first()
-    if user is None:
-        raise exceptions.NotFound("Please provide the correct refresh token")
-
+    user = get_user_from_refresh_token(request)
     expire_time = user.refresh_token_expires_at
     if expire_time is None or expire_time < timezone.now():
         raise exceptions.AuthenticationFailed(
