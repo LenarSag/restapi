@@ -9,8 +9,6 @@ from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.utils import timezone
 
-from api.views import refresh_token
-
 from .utils import generate_access_token, generate_refresh_token
 
 
@@ -114,6 +112,24 @@ class UserLoginTestCase(UserCommonTestFunctionality):
             self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
+def get_refresh_token_data():
+    return [
+        {},
+        {"refresh_token": None},
+        {"refresh_token": "NotUUID"},
+        {"refresh_token": uuid.uuid4()},
+    ]
+
+
+def get_response_status_data():
+    return [
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_400_BAD_REQUEST,
+        status.HTTP_404_NOT_FOUND,
+    ]
+
+
 class UserLogoutTestCase(UserCommonTestFunctionality):
     def test_authenticated_user_logout_success(self):
         generate_refresh_token(self.user)
@@ -129,19 +145,9 @@ class UserLogoutTestCase(UserCommonTestFunctionality):
     def test_user_with_invalid_token_failed_logout(self):
         generate_refresh_token(self.user)
         refresh_token_expires_at = self.user.refresh_token_expires_at
-        refresh_token_data = [
-            {},
-            {"refresh_token": None},
-            {"refresh_token": "NotUUID"},
-            {"refresh_token": uuid.uuid4()},
-        ]
-        response_status = [
-            status.HTTP_403_FORBIDDEN,
-            status.HTTP_403_FORBIDDEN,
-            status.HTTP_400_BAD_REQUEST,
-            status.HTTP_404_NOT_FOUND,
-        ]
-        for token, expected_status in zip(refresh_token_data, response_status):
+        for token, expected_status in zip(
+            get_refresh_token_data(), get_response_status_data()
+        ):
             response = self.client.post(reverse("api:logout"), token, format="json")
             self.assertEqual(response.status_code, expected_status)
             self.user.refresh_from_db()
@@ -184,19 +190,9 @@ class UserRefreshTestCase(UserCommonTestFunctionality):
     def test_user_with_invalid_token_failed_refresh(self):
         generate_refresh_token(self.user)
         refresh_token_expires_at = self.user.refresh_token_expires_at
-        refresh_token_data = [
-            {},
-            {"refresh_token": None},
-            {"refresh_token": "NotUUID"},
-            {"refresh_token": uuid.uuid4()},
-        ]
-        response_status = [
-            status.HTTP_403_FORBIDDEN,
-            status.HTTP_403_FORBIDDEN,
-            status.HTTP_400_BAD_REQUEST,
-            status.HTTP_404_NOT_FOUND,
-        ]
-        for token, expected_status in zip(refresh_token_data, response_status):
+        for token, expected_status in zip(
+            get_refresh_token_data(), get_response_status_data()
+        ):
             response = self.client.post(reverse("api:refresh"), token, format="json")
             self.assertEqual(response.status_code, expected_status)
             self.user.refresh_from_db()
