@@ -15,6 +15,14 @@ from .utils import generate_access_token, generate_refresh_token
 User = get_user_model()
 
 
+class UserCommonTestFunctionality(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username="testuser", email="testuser@example.com", password="testpassword"
+        )
+
+
 class UserRegistrationTestCase(TestCase):
     def setUp(self):
         self.client = APIClient()
@@ -57,16 +65,10 @@ class UserRegistrationTestCase(TestCase):
             self.assertFalse(User.objects.filter(username=data["username"]).exists())
 
 
-class UserProfileViewTestCase(TestCase):
-    def setUp(self):
-        self.client = APIClient()
-        self.user = User.objects.create_user(
-            username="testuser", password="testpassword"
-        )
-        self.access_token = generate_access_token(self.user)
-
+class UserProfileViewTestCase(UserCommonTestFunctionality):
     def test_authenticated_user_profile_view(self):
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
+        access_token = generate_access_token(self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_token}")
         response = self.client.get(reverse("api:detail"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["username"], self.user.username)
@@ -76,13 +78,7 @@ class UserProfileViewTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
-class UserLoginTestCase(TestCase):
-    def setUp(self):
-        self.client = APIClient()
-        self.user = User.objects.create_user(
-            username="testuser", password="testpassword"
-        )
-
+class UserLoginTestCase(UserCommonTestFunctionality):
     def test_user_login_success(self):
         user_login_data = {
             "username": "testuser",
@@ -112,13 +108,7 @@ class UserLoginTestCase(TestCase):
             self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
-class UserLogoutTestCase(TestCase):
-    def setUp(self):
-        self.client = APIClient()
-        self.user = User.objects.create_user(
-            username="testuser", password="testpassword"
-        )
-
+class UserLogoutTestCase(UserCommonTestFunctionality):
     def test_authenticated_user_logout_success(self):
         generate_refresh_token(self.user)
         refresh_token_data = {"refresh_token": self.user.refresh_token}
