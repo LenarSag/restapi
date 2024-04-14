@@ -139,3 +139,4 @@ REST_FRAMEWORK = {
 JWT_SECRET_KEY = "mysecretkey"
 ACCESS_TOKEN_LIFETIME = timedelta(hours=1)
 REFRESH_TOKEN_LIFETIME = timedelta(days=30)
+
