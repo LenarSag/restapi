@@ -23,6 +23,3 @@ def generate_refresh_token(user):
     user.refresh_token_expires_at = timezone.now() + settings.REFRESH_TOKEN_LIFETIME
     user.save()
     return user.refresh_token
-
-
-# 2ddc77fc-c26c-41a7-874d-d9e1d0d9c5ae
