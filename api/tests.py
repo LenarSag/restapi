@@ -17,7 +17,18 @@ VALID_REG_DATA = {
     "email": "testuser@example.com",
     "password": "testpassword",
 }
-
+REFRESH_TOKEN_VALUES = [
+    {},
+    {"refresh_token": None},
+    {"refresh_token": "NotUUID"},
+    {"refresh_token": uuid.uuid4()},
+]
+EXPECTED_STATUS_FOR_REFRESH_TOKEN = [
+    status.HTTP_403_FORBIDDEN,
+    status.HTTP_403_FORBIDDEN,
+    status.HTTP_400_BAD_REQUEST,
+    status.HTTP_404_NOT_FOUND,
+]
 
 User = get_user_model()
 
@@ -80,6 +91,23 @@ class UserProfileViewTestCase(UserCommonTestFunctionality):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
+class UserProfileUpdateTestCase(UserCommonTestFunctionality):
+    DATA = VALID_REG_DATA
+    DATA["username"] = "another_user"
+
+    def test_authenticated_user_can_update_himself(self):
+        access_token = generate_access_token(self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_token}")
+        response = self.client.post(reverse("api:detail"), self.DATA, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(User.objects.count(), 1)
+        self.assertEqual(response.data["username"], self.user.username)
+
+    def test_unauthenticated_user_profile_view(self):
+        response = self.client.post(reverse("api:detail"), self.DATA, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
 class UserLoginTestCase(UserCommonTestFunctionality):
     def test_user_login_success(self):
         user_login_data = {
@@ -110,24 +138,6 @@ class UserLoginTestCase(UserCommonTestFunctionality):
             self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
-def get_refresh_token_data():
-    return [
-        {},
-        {"refresh_token": None},
-        {"refresh_token": "NotUUID"},
-        {"refresh_token": uuid.uuid4()},
-    ]
-
-
-def get_response_status_data():
-    return [
-        status.HTTP_403_FORBIDDEN,
-        status.HTTP_403_FORBIDDEN,
-        status.HTTP_400_BAD_REQUEST,
-        status.HTTP_404_NOT_FOUND,
-    ]
-
-
 class UserLogoutTestCase(UserCommonTestFunctionality):
     def test_authenticated_user_logout_success(self):
         generate_refresh_token(self.user)
@@ -144,7 +154,7 @@ class UserLogoutTestCase(UserCommonTestFunctionality):
         generate_refresh_token(self.user)
         refresh_token_expires_at = self.user.refresh_token_expires_at
         for token, expected_status in zip(
-            get_refresh_token_data(), get_response_status_data()
+            REFRESH_TOKEN_VALUES, EXPECTED_STATUS_FOR_REFRESH_TOKEN
         ):
             response = self.client.post(reverse("api:logout"), token, format="json")
             self.assertEqual(response.status_code, expected_status)
@@ -158,8 +168,8 @@ class UserRefreshTestCase(UserCommonTestFunctionality):
     def test_refresh_with_valid_token_success_refresh(self):
         access_token = generate_access_token(self.user)
         refresh_token = generate_refresh_token(self.user)
-        # time to update access and refresh token
-        time.sleep(3)
+        # time to update access token
+        time.sleep(1)
         refresh_token_data = {"refresh_token": refresh_token}
         response = self.client.post(
             reverse("api:refresh"), refresh_token_data, format="json"
@@ -189,7 +199,7 @@ class UserRefreshTestCase(UserCommonTestFunctionality):
         generate_refresh_token(self.user)
         refresh_token_expires_at = self.user.refresh_token_expires_at
         for token, expected_status in zip(
-            get_refresh_token_data(), get_response_status_data()
+            REFRESH_TOKEN_VALUES, EXPECTED_STATUS_FOR_REFRESH_TOKEN
         ):
             response = self.client.post(reverse("api:refresh"), token, format="json")
             self.assertEqual(response.status_code, expected_status)

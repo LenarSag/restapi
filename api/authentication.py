@@ -17,7 +17,9 @@ class JWTAuthentication(BaseAuthentication):
         try:
             access_token = authorization_header.split(" ")[1]
             access_token_payload = jwt.decode(
-                access_token, settings.JWT_SECRET_KEY, algorithms=["HS256"]
+                access_token,
+                settings.JWT_SECRET_KEY,
+                algorithms=[settings.JWT_ALGORITHM],
             )
         except jwt.ExpiredSignatureError:
             raise exceptions.AuthenticationFailed("Access token expired")

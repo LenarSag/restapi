@@ -12,7 +12,7 @@ def generate_access_token(user):
         "iat": timezone.now(),
     }
     access_token = jwt.encode(
-        access_token_payload, settings.JWT_SECRET_KEY, algorithm="HS256"
+        access_token_payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
     )
     return access_token
 
