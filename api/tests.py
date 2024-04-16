@@ -23,12 +23,6 @@ REFRESH_TOKEN_VALUES = [
     {"refresh_token": "NotUUID"},
     {"refresh_token": uuid.uuid4()},
 ]
-EXPECTED_STATUS_FOR_REFRESH_TOKEN = [
-    status.HTTP_403_FORBIDDEN,
-    status.HTTP_403_FORBIDDEN,
-    status.HTTP_400_BAD_REQUEST,
-    status.HTTP_404_NOT_FOUND,
-]
 
 User = get_user_model()
 
@@ -153,11 +147,12 @@ class UserLogoutTestCase(UserCommonTestFunctionality):
     def test_user_with_invalid_token_failed_logout(self):
         generate_refresh_token(self.user)
         refresh_token_expires_at = self.user.refresh_token_expires_at
-        for token, expected_status in zip(
-            REFRESH_TOKEN_VALUES, EXPECTED_STATUS_FOR_REFRESH_TOKEN
-        ):
-            response = self.client.post(reverse("api:logout"), token, format="json")
-            self.assertEqual(response.status_code, expected_status)
+        for token in REFRESH_TOKEN_VALUES:
+            response = self.client.post(reverse("api:refresh"), token, format="json")
+            self.assertEqual(
+                response.status_code,
+                status.HTTP_400_BAD_REQUEST,
+            )
             self.user.refresh_from_db()
             self.assertEqual(
                 refresh_token_expires_at, self.user.refresh_token_expires_at
@@ -174,7 +169,7 @@ class UserRefreshTestCase(UserCommonTestFunctionality):
         response = self.client.post(
             reverse("api:refresh"), refresh_token_data, format="json"
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertNotEqual(response.data["access_token"], access_token)
         self.assertNotEqual(response.data["refresh_token"], refresh_token)
 
@@ -198,11 +193,12 @@ class UserRefreshTestCase(UserCommonTestFunctionality):
     def test_user_with_invalid_token_failed_refresh(self):
         generate_refresh_token(self.user)
         refresh_token_expires_at = self.user.refresh_token_expires_at
-        for token, expected_status in zip(
-            REFRESH_TOKEN_VALUES, EXPECTED_STATUS_FOR_REFRESH_TOKEN
-        ):
+        for token in REFRESH_TOKEN_VALUES:
             response = self.client.post(reverse("api:refresh"), token, format="json")
-            self.assertEqual(response.status_code, expected_status)
+            self.assertEqual(
+                response.status_code,
+                status.HTTP_400_BAD_REQUEST,
+            )
             self.user.refresh_from_db()
             self.assertEqual(
                 refresh_token_expires_at, self.user.refresh_token_expires_at

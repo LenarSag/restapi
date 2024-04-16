@@ -16,3 +16,11 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data["password"] = make_password(validated_data["password"])
         return super().create(validated_data)
+
+
+class UserUUIDSerializer(serializers.ModelSerializer):
+    refresh_token = serializers.UUIDField()
+
+    class Meta:
+        model = User
+        fields = ["refresh_token"]
